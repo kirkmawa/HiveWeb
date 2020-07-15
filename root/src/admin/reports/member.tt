@@ -23,10 +23,11 @@ SET labels =
 	payer_email    => { name => 'Payer Email' },
 	days_paid      => { name => 'Days Since Last Payment' },
 	reminders      => { name => 'Date(s) Reminders Sent', date => 1 },
+	payment_amount => { name => 'Last Payment Amount' },
 	};
 
 BLOCK category;
-	DEFAULT columns=['fname', 'lname', 'paypal_email', 'pay_date'] sort='lname';
+	DEFAULT columns=['fname', 'lname', 'paypal_email', 'pay_date', 'payment_amount'] sort='lname';
 IF !members OR members.size < 1;
 	RETURN;
 END;
