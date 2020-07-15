@@ -34,6 +34,15 @@ sub membership_status
 		alias   => 'pay_date',
 		columns => { pay_date => { max => 'payment_date' } },
 		})->as_query() || die $!;
+	my $rawipn_query = $schema->resultset('Payment')->search(
+		{ 
+		member_id => { ident => 'me.member_id' },
+		payment_date => { max => 'payment_date' },
+		},
+		{
+		join => 'ipn_message',
+		columns => { raw => 'ipn_message.raw' },
+		})->as_query() || die $!;
 	my $member_query = $schema->resultset('MemberMgroup')->search(
 		{
 		name      => 'members',
@@ -44,8 +53,8 @@ sub membership_status
 
 	my $members = $schema->resultset('Member')->search({ 'me.linked_member_id' => undef },
 		{
-		'+select' => [ $pay_date_query, $pay_query, $member_query, $badge_query ],
-		'+as'     => [ 'days_since_paid', 'pay_date', 'is_member', 'badge_count' ],
+		'+select' => [ $pay_date_query, $pay_query, $member_query, $badge_query, $rawipn_query ],
+		'+as'     => [ 'days_since_paid', 'pay_date', 'is_member', 'badge_count', 'rawipn' ],
 		prefetch  => 'linked_members',
 		});
 
@@ -73,6 +82,8 @@ sub membership_status
 				{
 				$category = 'no_badge';
 				}
+			my $rawipn = decode_json($member->get_column('rawipn'));
+			$payment_amount = $rawipn->{mc_gross};
 			}
 		elsif (!$is_paid && $is_member)
 			{
@@ -134,15 +145,16 @@ sub membership_status
 				}
 			push(@{ $categories->{$category} },
 				{
-				fname        => $member->fname(),
-				lname        => $member->lname(),
-				email        => $member->email(),
-				paypal_email => $member->paypal_email(),
-				pay_date     => $pay_date,
-				days_paid    => $days_paid,
-				created_at   => $member->created_at(),
-				linked       => $linked,
-				reminders    => \@reminders,
+				fname          => $member->fname(),
+				lname          => $member->lname(),
+				email          => $member->email(),
+				paypal_email   => $member->paypal_email(),
+				pay_date       => $pay_date,
+				payment_amount => $payment_amount,
+				days_paid      => $days_paid,
+				created_at     => $member->created_at(),
+				linked         => $linked,
+				reminders      => \@reminders,
 				});
 			}
 		}
